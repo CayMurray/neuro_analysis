@@ -1,0 +1,6 @@
+*.xlsx
+*.csv
+*.mat
+*.pkl
+*.html
+/data
