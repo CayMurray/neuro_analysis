@@ -1,0 +1,14 @@
+name: 3D
+
+channels:
+  - conda-forge
+  - defaults
+  - anaconda
+
+dependencies:
+  - numpy
+  - nibabel 
+  - seaborn
+  - matplotlib
+  - plotly
+  - nilearn 
