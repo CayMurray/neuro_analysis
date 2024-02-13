@@ -26,6 +26,7 @@ class LoadData:
 
 class ReduceDims:
     def __init__(self,method='PCA',n_components=2):
+        self.method = method
         self.n_components = n_components
         self.algorithm = self._initialize_algorithm(method)
 
@@ -36,4 +37,5 @@ class ReduceDims:
             return UMAP(n_components=self.n_components,random_state=42)
         
     def get_components(self,data):
-        return self.algorithm.fit_transform(data)
+        components = self.algorithm.fit_transform(data)
+        return pd.DataFrame(data=components,columns=[f'{self.method}_{i+1}' for i in range(self.n_components)])
