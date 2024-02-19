@@ -92,9 +92,9 @@ for experiment in experiments:
             total_holding = np.sum(master_dict[experiment][label][state])
             master_dict[experiment][label][state] = total_holding/total_time
     
-    experiment_dict = {'ID':[], **{state:[] for state in master_states}}
+    experiment_dict = {'labels':[], **{state:[] for state in master_states}}
     for rat_id,steady_state_dict in master_dict[experiment].items():
-        experiment_dict['ID'].append(rat_id)
+        experiment_dict['labels'].append(rat_id)
         for (state,state_value) in master_dict[experiment][rat_id].items():
             experiment_dict[state].append(state_value)
 

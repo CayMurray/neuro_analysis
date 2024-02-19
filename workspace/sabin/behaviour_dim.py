@@ -2,29 +2,99 @@
 
 import sys
 sys.path.append('/workspaces/neuro_analysis')
+
+import os
 import re
 
 import numpy as np
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 from scipy.stats import ks_2samp
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import confusion_matrix
 
 from src.data_handling import ReduceDims
 from src.visualization import BaseVisualizer
 
 
-## GET COMPONENTS ##
+## FUNCTIONS ##
+
+def extract_groups(id,groups,groups_dict):
+    parts = id.split('_')
+    return '_'.join(parts[groups_dict[group]] for group in groups)
+
+
+def plot_loadings(title,loadings,variance_ratio):
+    num_of_components = loadings.shape[1]
+    fig, axs = plt.subplots(nrows=1, ncols=num_of_components, figsize=(15, 5), sharey=False)
+
+    for i, pc in enumerate(loadings.columns):
+        temp_df = loadings[[pc]].copy()
+        temp_df['Feature'] = temp_df.index
+        temp_df['Sign'] = ['Positive' if x >= 0 else 'Negative' for x in temp_df[pc]]
+
+        sns.barplot(ax=axs[i],data=temp_df,x=pc,y='Feature',hue='Sign',legend=False)
+        axs[i].set_title(f'{pc} ({round(variance_ratio[i]*100,2)} % of variance)')
+        axs[i].set_xlabel('Loadings',fontsize=15,labelpad=20)
+        axs[i].set_xlim(-1, 1)  
+        axs[i].set_ylabel('Original Features',fontsize=15,labelpad=30)
+
+        if i > 0:
+            axs[i].set_ylabel('')
+            axs[i].set_yticklabels([])
+            axs[i].tick_params(left=False)
+
+    plt.suptitle(title,fontsize=30)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
+
+
+def compare_distributions(components):
+    intra_differences = []
+    inter_differences = []
+
+    for label in set(components['labels']):
+        intra_data = components[components['labels'].str.contains(label)].drop(['labels'],axis=1)
+        inter_data = components[~components['labels'].str.contains(label)].drop(['labels'],axis=1)
+
+        for sample_1 in range(len(intra_data)):
+            point_1 = intra_data.iloc[sample_1,:].values
+            
+            for sample_2 in range(len(intra_data)):
+                if sample_1 != sample_2:
+                    point_2 = intra_data.iloc[sample_2,:].values
+                    intra_diff = point_2 - point_1
+                    intra_differences.append(np.sqrt(np.sum(intra_diff**2)))
+
+            for sample_3 in range(len(inter_data)):
+                point_3 = inter_data.iloc[sample_3,:].values
+                inter_diff = point_3 - point_1
+                inter_differences.append(np.sqrt(np.sum(inter_diff**2)))
+
+    kstat,kpvalue = ks_2samp(intra_differences,inter_differences)
+    print(f'kstat: {kstat}', f'p-value: {kpvalue}')
+
+    return intra_differences,inter_differences,kstat,kpvalue
+
+
+## PREPARE DATA ##
 
 path = 'data/sabin/Full-MOFFT-Pre.xlsx'
-reducer = ReduceDims(method='PCA')
+experiments = ['C19']
+groups = ['rat'] # rat, food, sex, robot
+
+groups_dict = {'rat':0,'food':1 ,'sex':2,'robot':3}
+reducer = ReduceDims(method='PCA',n_components=2)
 visualizer = BaseVisualizer()
-include = ['C5','C6','C11','C12']
-include_pattern = '|'.join(re.escape(substring) for substring in include)
-groups = ['FD','Sated']
+
+experiments= '|'.join(re.escape(substring) for substring in experiments)
+sheet_names = pd.ExcelFile(path).sheet_names
+sheet_names = [i for i in sheet_names if re.search(experiments,i)]
 
 df_list = []
-sheet_names = pd.ExcelFile(path).sheet_names
-sheet_names = [i for i in sheet_names if re.search(include_pattern,i)]
-
 for (val,experiment) in enumerate(sheet_names):
     df = pd.read_excel(path,sheet_name=experiment)
     df_list.append(df)
@@ -33,41 +103,21 @@ for (val,experiment) in enumerate(sheet_names):
         master_columns = df.columns[1:]
     
 master_df = pd.concat(df_list,axis=0)
-include = '|'.join(groups)
-filtered_df = master_df[master_df['ID'].str.contains(include,na=False)]
-filtered_df.loc[:,'ID'] = filtered_df['ID'].apply(lambda x: groups[0] if groups[0] in x else groups[1])
-data = filtered_df.drop(['ID'],axis=1).values
+master_df.loc[:,'labels'] = master_df['labels'].apply(lambda x: extract_groups(x,groups,groups_dict))
+data = master_df.drop(['labels'],axis=1).values
 data = (data-data.mean())/(data.std())
 
 components = reducer.get_components(data)
-components['labels'] = filtered_df['ID'].values
-num_of_labels = len(set(components['labels']))
+components['labels'] = master_df['labels'].values
+
+loadings,variance_ratio  = reducer.get_loadings()
+loadings.index = master_df.columns[1:]
 
 
-## VISUALIZE AND COMPARE DISTRIBUTIONS ##
+## STATS AND VISUALIZE ##
 
-#visualizer.scatter_plot(f'{groups[0]},{groups[1]}',components,'PCA_1','PCA_2','labels',num_of_labels)
+visualizer.scatter_plot(set(components["labels"]),components,'labels')
+#plot_loadings('PCA Loadings for Male Rats',loadings,variance_ratio)
 
-intra_differences = []
-inter_differences = []
-for label in set(components['labels']):
-    intra_data = components[components['labels'].str.contains(label)].drop(['labels'],axis=1)
-    inter_data = components[~components['labels'].str.contains(label)].drop(['labels'],axis=1)
-
-    for sample_1 in range(len(intra_data)):
-        point_1 = intra_data.iloc[sample_1,:].values
-        
-        for sample_2 in range(len(intra_data)):
-            if sample_1 != sample_2:
-                point_2 = intra_data.iloc[sample_2,:].values
-                intra_diff = point_2 - point_1
-                intra_differences.append(np.sqrt(np.sum(intra_diff**2)))
-
-        for sample_3 in range(len(inter_data)):
-            point_3 = inter_data.iloc[sample_3,:].values
-            inter_diff = point_3 - point_1
-            inter_differences.append(np.sqrt(np.sum(inter_diff**2)))
-
-kstat,kpvalue = ks_2samp(intra_differences,inter_differences)
-print(f'kstat: {kstat}', f'p-value: {kpvalue}')
-
+intra,inter,kstat,kpvalue = compare_distributions(components)
+visualizer.bar_chart('Intra vs Inter Distances',intra=intra,inter=inter,ks=(kstat,kpvalue))

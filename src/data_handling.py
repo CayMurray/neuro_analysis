@@ -39,3 +39,10 @@ class ReduceDims:
     def get_components(self,data):
         components = self.algorithm.fit_transform(data)
         return pd.DataFrame(data=components,columns=[f'{self.method}_{i+1}' for i in range(self.n_components)])
+    
+    def get_loadings(self):
+        if self.method == 'PCA':
+            loadings = self.algorithm.components_.T
+            return pd.DataFrame(data=loadings,columns=[f'{self.method}_{i+1}' for i in range(self.n_components)]),self.algorithm.explained_variance_ratio_
+        else:
+            raise ValueError('Loadings can only be calculated for PCA')

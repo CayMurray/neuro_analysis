@@ -3,4 +3,4 @@
 
 [remote "arc"]
     url = ssh://cayden.murray@arc.ucalgary.ca:/home/cayden.murray/neuro_analysis
-    keyfile = C:\\Users\\Cayden\\.ssh\\arc
+    keyfile = C:\\Users\\cayde\\.ssh\\arc
