@@ -1,7 +1,7 @@
 ## MODULES ##
 
 import random 
-random.seed(42)
+random.seed(10)
 
 import numpy as np
 import seaborn as sns
@@ -17,9 +17,21 @@ class BaseVisualizer:
         self.fontsize = fontsize
         self.labelpad = labelpad
 
+        self.colours = ['#FC0505','#0555FC','#24FC05','#FCE105','#FC05F8']
+        self.shapes = ['o','s','D','X','P']
+
+        self.colours_dict = {}
+        self.shapes_dict = {}
+
     @staticmethod
     def _rgb2hex(n_colours):
-        return [to_hex([random.random() for _ in range(3)]) for _ in range(n_colours)]
+        unique_colours = set()
+
+        while len(unique_colours) < n_colours:
+            new_colour = to_hex([random.random() for _ in range(3)])
+            unique_colours.add(new_colour)
+
+        return unique_colours
     
     @staticmethod
     def _max_min(data,hue):
@@ -27,29 +39,38 @@ class BaseVisualizer:
         vmin = array.mean() - array.std()
         vmax = array.mean() + array.std()
         return vmin,vmax
+    
+    def _update_dicts_for_shapes(self,labels,distinct_shapes=True):
+        unique_labels = sorted(set(labels))
+
+        for (i,label) in enumerate(unique_labels):
+            self.colours_dict[label] = self.colours[i]
+            self.shapes_dict[label] = self.shapes[i] if distinct_shapes else 'o'
+
 
     def _plot(self,ax,X,Y,title,fig):
         ax.set_xlabel(X,fontsize=self.fontsize,labelpad=self.labelpad)
         ax.set_ylabel(Y,fontsize=self.fontsize,labelpad=self.labelpad)
         ax.set_title(title,fontsize=self.fontsize,pad=self.labelpad)
         plt.show()
-        fig.savefig(f'{title}.png',dpi=300)
+        fig.savefig(f'{title}.png',transparent=True,dpi=300)
 
-    def heat_map(self,title,data,hue,normalize=True,xticks=None,yticks=None,annot=False):
+    def heat_map(self,title,data,hue='labels',normalize=False,xticks=None,yticks=None,annot=True):
         vmin,vmax = self._max_min(data,hue) if normalize else (None,None)
         fig,ax = plt.subplots(figsize=self.figsize)
         sns.heatmap(ax=ax,data=data,cmap='viridis',xticklabels=xticks,yticklabels=yticks,vmin=vmin,vmax=vmax,annot=annot)
         self._plot(ax,'Predicted','True',title,fig)
 
     def scatter_plot(self,title,data,hue=None):
-        n_colours = len(set(data[hue]))
         fig,ax = plt.subplots(figsize=self.figsize)
-        sns.scatterplot(ax=ax,data=data,x=data.columns[0],y=data.columns[1],hue=hue,palette=self._rgb2hex(n_colours))
+        n_colours = len(set(data[hue]))
+        self._update_dicts_for_shapes(data[hue])
+        sns.scatterplot(ax=ax,data=data,x=data.columns[0],y=data.columns[1],hue=hue,style=hue,palette=self.colours_dict,markers=self.shapes_dict)
         self._plot(ax,data.columns[0],data.columns[1],title,fig)
 
     def bar_chart(self,title,ks=None,**kwargs):
         fig,ax = plt.subplots(figsize=(15,10))
-        colour_list = self._rgb2hex(len(kwargs))
+        colour_list = [to_hex([random.random() for _ in range(3)]) for _ in range(len(kwargs))]
 
         for (i,(label,dist)) in enumerate(kwargs.items()):
             sns.histplot(ax=ax,data=dist,color=colour_list[i],stat='density',label=label)
