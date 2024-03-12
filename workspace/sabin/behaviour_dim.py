@@ -86,11 +86,11 @@ def compare_distributions(components):
 ## PREPARE DATA ##
 
 path = 'data/sabin/Full-MOFFT-Pre.xlsx'
-experiments = ['C5','C6','C11','C12']
-groups = ['sex','robot'] # rat, food, sex, robot
+experiments = ['C19']
+groups = ['rat'] # rat, food, sex, robot, day
 
 groups_dict = {'rat':0,'food':1 ,'sex':2,'robot':3,'day':4}
-reducer = ReduceDims(method='PCA',n_components=2)
+reducer = ReduceDims(method='UMAP',n_components=2)
 visualizer = BaseVisualizer()
 
 experiments= '|'.join(re.escape(substring) for substring in experiments)
@@ -106,6 +106,7 @@ for (val,experiment) in enumerate(sheet_names):
         master_columns = df.columns[1:]
 
 master_df = pd.concat(df_list,axis=0)
+master_df = master_df[master_df['labels'].str.contains('_NoR_')]
 master_df.loc[:,'labels'] = master_df['labels'].apply(lambda x: extract_groups(x,groups,groups_dict))
 data = master_df.drop(['labels'],axis=1).values
 data = (data-data.mean())/(data.std())
@@ -113,22 +114,23 @@ data = (data-data.mean())/(data.std())
 components = reducer.get_components(data)
 components['labels'] = master_df['labels'].values
 
-loadings,variance_ratio  = reducer.get_loadings()
-loadings.index = master_df.columns[1:]
+#loadings,variance_ratio  = reducer.get_loadings()
+#loadings.index = master_df.columns[1:]
 
 
 ## VISUALIZE ##
 
-visualizer.scatter_plot("PCA Space of Rats with Sex and Robot as Variables",components,'labels')
+visualizer.scatter_plot("UMAP_Males_NoRobot",components,'labels')
 #plot_loadings(f'PCA Loadings for Rats',loadings,variance_ratio)
 
-'''
+
 
 ## DISTRIBUTIONS ##
 
-#intra,inter,kstat,kpvalue = compare_distributions(master_df)
-#visualizer.bar_chart('Intra vs Inter Distances with Sex and Robot as Variables',intra=intra,inter=inter,ks=(kstat,kpvalue))
+intra,inter,kstat,kpvalue = compare_distributions(master_df)
+visualizer.bar_chart('Intra vs Inter Distances with Sex and Robot as Variables',intra=intra,inter=inter,ks=(kstat,kpvalue))
 
+'''
 ## MACHINE LEARNING ##
 
 model = RandomForestClassifier(n_estimators=100,random_state=42)
@@ -147,5 +149,5 @@ unique_labels = set(y)
 
 for i in os.listdir():
     if i.endswith('png'):
-        os.remove(i)
+        #os.remove(i)
         pass

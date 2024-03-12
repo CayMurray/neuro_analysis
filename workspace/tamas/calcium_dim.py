@@ -38,9 +38,9 @@ for contexts in [[''],['HC_PRE'],['HC_PRE','US_PRE'],['HC_PRE','US_PRE','HC_POST
     copy.loc[flipped_bool,['PCA_1','PCA_2']] = -500
     fig,ax = plt.subplots(figsize=(15,10))
     sns.scatterplot(ax=ax,data=copy,x='PCA_1',y='PCA_2',hue='labels')
-    ax.set_xlim((-6,8))
+    ax.set_xlim((-6,12))
     ax.set_ylim((-8,8))
-    ax.set_title('Principal Components of FS Mice',fontsize=30,pad=20)
+    ax.set_title('Principal Components of Non-FS Mice',fontsize=30,pad=20)
     ax.set_xlabel('PCA_1',fontsize=20,labelpad=20)
     ax.set_ylabel('PCA_2',fontsize=20,labelpad=20)
     plt.show()
@@ -48,5 +48,5 @@ for contexts in [[''],['HC_PRE'],['HC_PRE','US_PRE'],['HC_PRE','US_PRE','HC_POST
 
 for i in os.listdir():
     if i.endswith('png'):
-        os.remove(i)
+        #os.remove(i)
         pass

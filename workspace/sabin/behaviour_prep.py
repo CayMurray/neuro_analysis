@@ -44,6 +44,7 @@ for experiment in experiments:
         elif 'RM' in experiment and 'MOFT' not in experiment:
             rat_num = int(col.split('rat')[-1])-1 if 'rat' in col else int(df.columns[idx-1].split('rat')[-1])-1
             robot = col.split()[1] if ' ' in col else df.columns[idx+1].split()[1]
+            robot = 'NoR' if 'nor' in robot.lower() else robot 
             day = col.split('-')[0] if 'day' in col else df.columns[idx-1].split('-')[0]
             label = f'{rat_num}_FD_{sex}_{robot}_{day}'
             label = f"{label.split('.')[0]}"
