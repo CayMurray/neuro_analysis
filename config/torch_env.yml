@@ -20,6 +20,7 @@ dependencies:
   - torchaudio
   - pytorch-cuda=12.1
   - scikit-learn
+  - scikit-posthocs
   - umap-learn
   - hdbscan
   - matplotlib

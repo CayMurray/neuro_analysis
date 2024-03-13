@@ -1,16 +1,17 @@
 ## MODULES ##
 
 import sys
-sys.path.append('c:/Users/cayde/OneDrive/Desktop/neuro_analysis')
+sys.path.append('/workspaces/neuro_analysis')
+
+from collections import Counter
 
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 
 ## PREPARE DATA ##
 
+df_list = []
 master_dict = {}
 abbrev_dict = {'Males':'Male','Females':'Female','No-Robot':'NoR','Robot':'R'}
 experiments_list = []
@@ -66,10 +67,11 @@ for experiment in experiments:
 
     df.columns = new_columns
     df = df.iloc[1:,:]
-
-    #behaviours_df = df[[i for i in df.columns if 'behaviour' in i]]
-    #non_nan_values = behaviours_df.fillna(value='VIDEO_END').values.flatten()
-    #master_states = set([value for value in non_nan_values if value!='VIDEO_END'])
+    df_list.append((experiment,df))
+    
+    with pd.ExcelWriter('data/sabin/Full-MOFFT-Pre.xlsx') as writer:
+        for (sheet_name,df) in df_list:
+            df.to_excel(writer,sheet_name=sheet_name,index=False)
 
     for i in range(len(df.columns)//2):
         indv_columns = [j for j in df.columns if j.split('_')[0]==str(i)]
@@ -101,6 +103,6 @@ for experiment in experiments:
 
     experiments_list.append((experiment,pd.DataFrame(experiment_dict)))
 
-with pd.ExcelWriter('data/sabin/Full-MOFFT-Pre.xlsx') as writer:
+with pd.ExcelWriter('data/sabin/Full-MOFFT-Steady.xlsx') as writer:
     for sheet_name,df in experiments_list:
         df.to_excel(writer,sheet_name=sheet_name,index=False)
