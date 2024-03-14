@@ -15,8 +15,8 @@ import scikit_posthocs as sp
 
 
 label_dict = {'ID':0,'sex':1,'day':2}
-path = 'data/sabin/Full-MOFFT-Gen.xlsx'
-sheet_name = 'C20_RM_Females_Beh'
+path = 'data/sabin/Full-MOFFT-Time.xlsx'
+sheet_name = 'C19_RM_Males_Beh'
 
 ## FUNCTIONS ##
 
@@ -38,7 +38,7 @@ def prepare_data(path,sheet_name,type='holding'):
         df = df.drop(['N HomeBox'],axis=1)
 
     elif type == 'gen':
-        df = df[[i for i in df.columns if i.split('_')[0]!=i.split('_')[1]]]
+        df = df[[i for i in df.columns if i.split('_')[0]!=i.split('_')[1] and i.split('_')[1] !='N HomeBox']]
 
     for (row_num,label) in enumerate(labels):
         parts = label.split('_')
@@ -88,7 +88,7 @@ def compare_days(df,chart='line'):
 
 ## PREPARE DATA ##
     
-final_df = prepare_data(path,sheet_name,type='gen')
+final_df = prepare_data(path,sheet_name,type='holding')
 
 
 ## STATS ##
