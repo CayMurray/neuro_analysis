@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from scipy.linalg import expm
+from scipy.spatial.distance import jensenshannon
+from scipy.stats import shapiro, ttest_ind, mannwhitneyu
 
 np.random.seed(42)
 
@@ -70,13 +72,15 @@ def markets():
         print(f'Theoretical:{steady_state}, Experimental:{pt}')
 
 
-def rodents():
-    time_df = reorder_sheets('data/sabin/Full-MOFFT-Time.xlsx').drop(['labels'],axis=1)
-    gen_df = reorder_sheets('data/sabin/Full-MOFFT-Gen.xlsx',func=sort_generator).drop(['labels'],axis=1)
+def rodents(sheet_name = 'C19_RM_Males_Beh'):
+    #labels = reorder_sheets('data/sabin/Full-MOFFT-Time.xlsx',sheet_name=sheet_name)['labels']
+    time_df = reorder_sheets('data/sabin/Full-MOFFT-Time.xlsx',sheet_name=sheet_name).drop(['labels'],axis=1)
+    gen_df = reorder_sheets('data/sabin/Full-MOFFT-Gen.xlsx',sheet_name=sheet_name,func=sort_generator).drop(['labels'],axis=1)
     samples = np.random.dirichlet([1]*12,100)
 
+    multi_list = []
+    prob_list = []
     for rat in range(time_df.shape[0]):
-        time = time_df.iloc[rat,:].values
         Q = gen_df.iloc[rat,:].values.reshape((12,12))
         eigvals,eigvectors = np.linalg.eig(Q.T)
         rounded_vals = np.real(np.round(eigvals,decimals=5))
@@ -88,16 +92,66 @@ def rodents():
             if np.abs(i) == 0.0:
                 eig_dict[index] = np.real(eigvectors[:,index]/np.sum(eigvectors[:,index]))
 
+        multi = dict(sorted(multi.items(),key=lambda x: np.abs(x[0])))
+        multi_list.append([i for i in multi.values()][0])
+
         for sample in samples:
             pt = np.dot(sample,expm(Q*1000))
+            prob_list.append(pt)
 
-        for (key,vector) in eig_dict.items():
-            distance = 0.5*(np.sum(np.abs(pt-vector)))
+    '''
+    df = pd.DataFrame(multi_list, columns=['Multiplicities'])
+    fig,ax = plt.subplots()
+    sns.histplot(ax=ax, data=df, x='Multiplicities', discrete=True, shrink=0.8)
+    ax.set_title('Histogram of Multiplicities',fontsize=30,pad=20)
+    ax.set_xlabel('Multiplicities of Eigenvalues',fontsize=30,labelpad=20)
+    ax.set_ylabel('Count',fontsize=30,labelpad=20)
+    ax.set_xticks(range(min(multi_list), max(multi_list) + 1))
 
+    plt.show()
+    '''
 
+    return prob_list
+
+    
 ## MONTE-CARLO ##
 
-rodents()
+main_dict = {}
+
+for (df1,df2) in [('C5_No-Robot-MOFFT_Males_Beh','C6_Robot-MOFFT_Males_Beh'),('C11_No-Robot-MOFFT_Females_Beh','C12_Robot-MOFFT_Females_Beh')]:
+    js_diverge = []
+    d1 = rodents(df1)
+    d2 = rodents(df2)
+    
+    for vec1 in d1:
+        for vec2 in d2:
+            js_diverge.append(jensenshannon(vec1,vec2,base=2)**2)
+
+    main_dict[df1.split('_')[-2]] = js_diverge
+
+p_values = []
+for (key,value) in main_dict.items():
+    _,p = shapiro(value)
+    p_values.append(p)
+
+if any(i < 0.05 for i in p_values):
+    u,p = mannwhitneyu(main_dict['Males'],main_dict['Females'],alternative='two-sided')
+    print(u,p)
+
+print(f'Males: {np.median(main_dict["Males"])}')
+print(f'Females: {np.median(main_dict["Females"])}')
+
+fig,ax = plt.subplots()
+for (sex,value) in main_dict.items():
+    sns.histplot(ax=ax,data=value,label=sex)
+
+ax.set_title('JS Divergence Values from Single-day Experiments',fontsize=30,pad=20)
+ax.set_xlabel('JS Divergence',fontsize=30,labelpad=20)
+ax.set_ylabel('Counts',fontsize=30,labelpad=20)
+
+plt.legend()
+plt.show()
+
 
     
             
